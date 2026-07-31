@@ -1,0 +1,7 @@
+.venv/
+.hf_token
+*.m4a
+*.mp3
+*.wav
+*.transcript.txt
+.DS_Store
