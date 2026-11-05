@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Transcribe an audio file with Whisper + pyannote speaker diarization.
+# Usage: transcribe <audio file>
+# Prompts for language, number of speakers, and model size.
+#
+# Hugging Face token: taken from $HF_TOKEN, or else from .hf_token in the
+# project root (git-ignored). Never commit a token to this file.
+set -euo pipefail
+
+# Locate the project root, following the symlink if installed via one.
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+PROJECT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: transcribe <audio file>" >&2
+  exit 1
+fi
+
+if [[ -z "${HF_TOKEN:-}" ]]; then
+  if [[ -f "$PROJECT_DIR/.hf_token" ]]; then
+    HF_TOKEN="$(tr -d '[:space:]' < "$PROJECT_DIR/.hf_token")"
+  else
+    echo "Error: no Hugging Face token. Set HF_TOKEN or create $PROJECT_DIR/.hf_token" >&2
+    exit 1
+  fi
+fi
+
+if [[ ! -f "$PROJECT_DIR/.venv/bin/activate" ]]; then
+  echo "Error: $PROJECT_DIR/.venv not found. See README.md setup." >&2
+  exit 1
+fi
+
+# Resolve the audio file to an absolute path.
+if [[ ! -f "$1" ]]; then
+  echo "Error: file not found: $1" >&2
+  exit 1
+fi
+AUDIO="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+
+# --- Language ---
+read -r -p "Language code (e.g. es, en; blank = auto-detect): " LANG_CODE
+
+# --- Speakers ---
+while true; do
+  read -r -p "Number of speakers (blank = auto-detect): " SPEAKERS
+  [[ -z "$SPEAKERS" || "$SPEAKERS" =~ ^[1-9][0-9]*$ ]] && break
+  echo "Please enter a positive number or leave blank."
+done
+
+# --- Model size ---
+MODELS=(tiny base small medium large-v3)
+echo "Model size:"
+select MODEL in "${MODELS[@]}"; do
+  [[ -n "${MODEL:-}" ]] && break
+  echo "Pick a number from 1 to ${#MODELS[@]}."
+done
+
+ARGS=(--model "$MODEL")
+[[ -n "$LANG_CODE" ]] && ARGS+=(--language "$LANG_CODE")
+[[ -n "$SPEAKERS" ]] && ARGS+=(--min-speakers "$SPEAKERS" --max-speakers "$SPEAKERS")
+
+echo
+echo "Transcribing: $AUDIO"
+echo "Model: $MODEL | Language: ${LANG_CODE:-auto} | Speakers: ${SPEAKERS:-auto}"
+echo
+
+# shellcheck disable=SC1091
+source "$PROJECT_DIR/.venv/bin/activate"
+export HF_TOKEN
+python "$PROJECT_DIR/transcribe.py" "$AUDIO" "${ARGS[@]}"

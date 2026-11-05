@@ -22,9 +22,41 @@ pyannote's diarization models are gated behind a free license click-through:
    - https://huggingface.co/pyannote/speaker-diarization-3.1
    - https://huggingface.co/pyannote/segmentation-3.0
 3. Create a read token at https://huggingface.co/settings/tokens
-4. Export it: `export HF_TOKEN=hf_yourtokenhere`
+4. Either export it (`export HF_TOKEN=hf_yourtokenhere`) or save it to
+   `.hf_token` in the project root (git-ignored): `echo hf_yourtokenhere > .hf_token`
 
-## Usage
+## Interactive command (`transcribe` from anywhere)
+
+`bin/transcribe` is a wrapper that prompts for language, number of speakers,
+and model size, then runs `transcribe.py` with the project's `.venv`.
+
+Install it by symlinking it into a directory on your `PATH`:
+
+```
+chmod +x bin/transcribe
+mkdir -p ~/.local/bin
+ln -sf "$PWD/bin/transcribe" ~/.local/bin/transcribe
+```
+
+If `~/.local/bin` isn't on your `PATH`, add this to `~/.zshrc`:
+
+```
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Then, from any directory:
+
+```
+transcribe path/to/recording.m4a
+```
+
+The token is read from `HF_TOKEN`, or else from `.hf_token` in the project
+root. Don't put the token in the script itself — it's tracked by git.
+
+Tip: macOS voice-memo filenames can contain invisible characters; use tab
+completion or drag the file into the terminal rather than typing the name.
+
+## Usage (direct)
 
 ```
 source .venv/bin/activate
